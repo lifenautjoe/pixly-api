@@ -9,6 +9,9 @@ import morgan from 'morgan';
 import compression from 'compression';
 import errorMiddleware from './middlewares/error.middleware';
 import { logger, stream } from './utils/logger';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import ChatService from './services/ChatService';
 
 validateEnv();
 
@@ -45,3 +48,8 @@ app.use(errorMiddleware);
 app.listen(port, () => {
   logger.info(`🚀 App listening on the port ${port}`);
 });
+
+const server = createServer(app);
+const io = new Server(server);
+
+new ChatService(io);

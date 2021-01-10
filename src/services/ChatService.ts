@@ -1,9 +1,5 @@
 import { Server, Socket } from 'socket.io';
 
-class Room {
-  users: [];
-}
-
 class ChatService {
   static readonly events = {
     NEW_MESSAGE: 'newMessage',
