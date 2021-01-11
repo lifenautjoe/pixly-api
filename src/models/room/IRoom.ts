@@ -1,4 +1,5 @@
-import { IUser } from './IUser';
+import { IUser } from './../user/IUser';
+
 export interface IRoom {
   name: string;
 
@@ -7,10 +8,6 @@ export interface IRoom {
   addUser(user: IUser): void;
 
   removeUserWithSocketId(socketId: string): void;
-
-  getUserWithName(userName: string): IUser | undefined;
-
-  userWithNameIsInRoom(username: string): boolean;
 
   getUserWithSocketId(socketId: string): IUser | undefined;
 
