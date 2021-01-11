@@ -1,37 +1,38 @@
-import { IMessage } from '../models/message/IMessage';
-import { IUser } from '../models/user/IUser';
-import { IRoom } from '../models/room/IRoom';
-import { IUserStatusUpdateEventData } from '../../core/interfaces/event-data/UserUpdateEventData';
-import { INewMessageEventData } from '../../core/interfaces/event-data/INewMessageEventData';
-import { IJoinedRoomEventData } from '../../core/interfaces/event-data/IJoinedRoomEventData';
-import { IAuthenticatedEventData } from '../../core/interfaces/event-data/IAuthenticatedEventData';
-import { UpdateStatusActionDto } from '../../core/dtos/UpdateStatusActionDto';
-import { SendMessageActionDto } from '../../core/dtos/SendMessageActionDto';
-import { JoinRoomActionDto } from '../../core/dtos/JoinRoomActionDto';
-import { AuthenticateActionDto } from '../../core/dtos/AuthenticateActionDto';
-import { IErrorEventData } from '../../core/interfaces/event-data/IErrorEventData';
-import { plainToClass } from 'class-transformer';
-import { Server, Socket } from 'socket.io';
-import { PixlyProtocol } from '../../core/protocol';
-import { validateSync, ValidationError } from 'class-validator';
-import PixlyInputError from '../errors/PixlyInputError';
-import PixlyError from '../errors/PixlyError';
-import { deserializeMessage, deserializeRoom, deserializeUser } from '../utils/modelDeserializers';
-import { serializeMessage, serializeRoom, serializeUser } from '../utils/modelSerializers';
-import { Logger } from 'winston';
+import { IUserLeftRoomEventData } from "./../../core/interfaces/event-data/IUserLeftRoomEventData";
+import { IMessage } from "../models/message/IMessage";
+import { IUser } from "../models/user/IUser";
+import { IRoom } from "../models/room/IRoom";
+import { IUserStatusUpdateEventData } from "../../core/interfaces/event-data/UserUpdateEventData";
+import { INewMessageEventData } from "../../core/interfaces/event-data/INewMessageEventData";
+import { IJoinedRoomEventData } from "../../core/interfaces/event-data/IJoinedRoomEventData";
+import { IAuthenticatedEventData } from "../../core/interfaces/event-data/IAuthenticatedEventData";
+import { UpdateStatusActionDto } from "../../core/dtos/UpdateStatusActionDto";
+import { SendMessageActionDto } from "../../core/dtos/SendMessageActionDto";
+import { JoinRoomActionDto } from "../../core/dtos/JoinRoomActionDto";
+import { AuthenticateActionDto } from "../../core/dtos/AuthenticateActionDto";
+import { IErrorEventData } from "../../core/interfaces/event-data/IErrorEventData";
+import { plainToClass } from "class-transformer";
+import { Server, Socket } from "socket.io";
+import { PixlyProtocol } from "../../core/protocol";
+import { useContainer, validateSync, ValidationError } from "class-validator";
+import PixlyInputError from "../errors/PixlyInputError";
+import PixlyError from "../errors/PixlyError";
+import { deserializeMessage, deserializeRoom, deserializeUser } from "../utils/modelDeserializers";
+import { serializeMessage, serializeRoom, serializeUser } from "../utils/modelSerializers";
+import { Logger } from "winston";
 
 class PixlyService {
   private rooms: { [roomName: string]: IRoom } = {};
   private users: { [userSocketId: string]: IUser } = {};
 
   constructor(private io: Server, private logger: Logger) {
-    io.on('connection', this.onConnection);
+    io.on("connection", this.onConnection);
   }
 
   private onConnection(socket: Socket) {
     this.installActions(socket);
 
-    socket.on('disconnecting', this.onDisconnecting);
+    socket.on("disconnecting", this.onDisconnecting);
   }
 
   private installActions(socket: Socket) {
@@ -93,7 +94,7 @@ class PixlyService {
    */
   private validateData<T>({ socket, rawData, dto, onValid, user }: ValidationData<T>) {
     if (Array.isArray(rawData)) {
-      throw new Error('Unexpected input');
+      throw new Error("Unexpected input");
     }
 
     // For some reason, TS doesnt catch that we did an array check before already
@@ -116,7 +117,7 @@ class PixlyService {
     const user = this.getUserWithSocketId(socket.id);
 
     if (!user) {
-      throw new Error('Please authenticate first');
+      throw new Error("Please authenticate first");
     }
 
     onAuthenticated(user);
@@ -146,13 +147,22 @@ class PixlyService {
 
   private onWantsToJoinRoom(socket: Socket, { roomName }: JoinRoomActionDto, user: IUser) {
     if (user.room) {
-      throw new PixlyError('User is already part of a room.');
+      const room = user.room;
+      user.leaveRoom();
+
+      if (room.isEmpty()) {
+        // No one left to emit events to, delete the room
+        this.removeRoomWithName(room.name);
+      } else {
+        // Let everyone know that the user left the room
+        this.emitUserLeftRoomEvent(socket, room, user);
+      }
     }
 
     const room = this.getRoomWithName(roomName);
 
     if (room.userWithSocketIdIsInRoom(user.socketId)) {
-      throw new PixlyError('You are already in the room');
+      throw new PixlyError("You are already in the room");
     }
 
     room.addUser(user);
@@ -167,7 +177,7 @@ class PixlyService {
 
   private onWantsToSendMessage(socket: Socket, { messageText }: SendMessageActionDto, { room, name }: IUser) {
     if (!room) {
-      throw new PixlyError('You are not part of any room');
+      throw new PixlyError("You are not part of any room");
     }
 
     const message = deserializeMessage({
@@ -181,7 +191,7 @@ class PixlyService {
 
   private onWantsToUpdateStatus(socket: Socket, { x, y }: UpdateStatusActionDto, user: IUser) {
     if (!user.room) {
-      throw new PixlyError('You are not part of any room');
+      throw new PixlyError("You are not part of any room");
     }
 
     user.updateStatus(x, y);
@@ -199,11 +209,11 @@ class PixlyService {
   private onError(socket: Socket, error: Error | PixlyInputError) {
     const isProtocolError = error instanceof PixlyInputError;
 
-    const errorMessage = isProtocolError ? error.message : 'Server error';
+    const errorMessage = isProtocolError ? error.message : "Server error";
 
     this.emitErrorEvent(socket, {
       // If its a protocol error, it has a nice message, if its not, don't expose internals.
-      message: isProtocolError ? error.message : 'Server error',
+      message: isProtocolError ? error.message : "Server error",
     });
 
     if (!isProtocolError) {
@@ -230,6 +240,14 @@ class PixlyService {
     };
 
     socket.emit(PixlyProtocol.events.JOINED_ROOM, eventData);
+  }
+
+  private emitUserLeftRoomEvent(socket: Socket, room: IRoom, user: IUser) {
+    const eventData: IUserLeftRoomEventData = {
+      user: serializeUser(user),
+    };
+
+    socket.to(room.name).emit(PixlyProtocol.events.USER_LEFT_ROOM, eventData);
   }
 
   private emitNewMessageEvent(socket: Socket, room: IRoom, message: IMessage) {
@@ -265,6 +283,10 @@ class PixlyService {
     return room;
   }
 
+  private removeRoomWithName(roomName: string) {
+    delete this.rooms[roomName];
+  }
+
   private storeRoomWithName(room: IRoom, name: string) {
     this.rooms[name] = room;
   }
@@ -278,6 +300,12 @@ class PixlyService {
   }
 
   private removeUserWithSocketId(socketId: string) {
+    const user = this.getUserWithSocketId(socketId);
+
+    if (user && user.room) {
+      user.room.removeUserWithSocketId(socketId);
+    }
+
     delete this.users[socketId];
   }
 }

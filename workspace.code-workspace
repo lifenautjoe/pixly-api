@@ -2,9 +2,13 @@
   "folders": [
     {
       "path": "."
+    },
+    {
+      "path": "../pixly-app"
     }
   ],
   "settings": {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "prettier.requireConfig": true
   }
 }

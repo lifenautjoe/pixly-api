@@ -1,9 +1,9 @@
-import { IRoom } from './../room/IRoom';
-import { IUserStatus } from './../user-status/IUserStatus';
-import { IUser } from './IUser';
-import { Exclude, Transform } from 'class-transformer';
-import { UserStatus } from '../user-status/UserStatus';
-import { serializeUserStatus } from '../../utils/modelSerializers';
+import { IRoom } from "./../room/IRoom";
+import { IUserStatus } from "./../user-status/IUserStatus";
+import { IUser } from "./IUser";
+import { Exclude, Transform } from "class-transformer";
+import { UserStatus } from "../user-status/UserStatus";
+import { serializeUserStatus } from "../../utils/modelSerializers";
 
 export class User implements IUser {
   socketId: string;
@@ -24,5 +24,12 @@ export class User implements IUser {
     } else {
       this.status = new UserStatus(x, y);
     }
+  }
+
+  leaveRoom() {
+    if (!this.room) return;
+
+    this.room.removeUserWithSocketId(this.socketId);
+    this.room = null;
   }
 }

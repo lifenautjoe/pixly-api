@@ -1,8 +1,8 @@
-import { IUserData } from './../../../core/interfaces/model-data/IUserData';
-import { IRoom } from './IRoom';
-import { IUser } from '../user/IUser';
-import { Transform } from 'class-transformer';
-import { serializeUser } from '../../utils/modelSerializers';
+import { IUserData } from "./../../../core/interfaces/model-data/IUserData";
+import { IRoom } from "./IRoom";
+import { IUser } from "../user/IUser";
+import { Transform } from "class-transformer";
+import { serializeUser } from "../../utils/modelSerializers";
 
 export class Room implements IRoom {
   public name: string;
@@ -43,5 +43,14 @@ export class Room implements IRoom {
 
   userWithSocketIdIsInRoom(socketId: string): boolean {
     return !!this.getUserWithSocketId(socketId);
+  }
+
+  countUsers() {
+    if (!this.users) return 0;
+    return Object.keys(this.users).length;
+  }
+
+  isEmpty() {
+    return this.countUsers() === 0;
   }
 }

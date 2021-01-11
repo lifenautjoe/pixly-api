@@ -1,6 +1,6 @@
-import { IRoom } from './../room/IRoom';
+import { IRoom } from "./../room/IRoom";
 
-import { IUserStatus } from '../user-status/IUserStatus';
+import { IUserStatus } from "../user-status/IUserStatus";
 export interface IUser {
   socketId: string;
 
@@ -13,4 +13,6 @@ export interface IUser {
   room?: IRoom;
 
   updateStatus(x: number, y: number): void;
+
+  leaveRoom(): void;
 }

@@ -1,9 +1,13 @@
-import { IUser } from './../user/IUser';
+import { IUser } from "./../user/IUser";
 
 export interface IRoom {
   name: string;
 
   users?: { [userSocketId: string]: IUser };
+
+  countUsers(): number;
+
+  isEmpty(): boolean;
 
   addUser(user: IUser): void;
 
