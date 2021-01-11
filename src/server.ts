@@ -11,7 +11,7 @@ import errorMiddleware from './middlewares/error.middleware';
 import { logger, stream } from './utils/logger';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import ChatService from './services/ChatService';
+import PixlyService from './services/PixlyService';
 
 validateEnv();
 
@@ -46,10 +46,10 @@ app.use(errorMiddleware);
 // Start server
 
 app.listen(port, () => {
-  logger.info(`🚀 App listening on the port ${port}`);
+  logger.info(`👾 Pixly is now listening on port ${port}`);
 });
 
 const server = createServer(app);
 const io = new Server(server);
 
-new ChatService(io);
+new PixlyService(io, logger);
