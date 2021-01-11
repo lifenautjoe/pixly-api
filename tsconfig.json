@@ -16,6 +16,6 @@
     "noEmit": false,
     "esModuleInterop": true
   },
-  "include": ["./src/**/*", ".env", "../core/models"],
+  "include": ["./src/**/*", ".env", "../core/**/*"],
   "exclude": ["node_modules"]
 }
