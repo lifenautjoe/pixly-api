@@ -186,18 +186,19 @@ export class PixlyService {
     this.emitUserJoinedRoomEvent(socket, room, user);
   };
 
-  private onWantsToSendMessage = (socket: Socket, { text }: SendMessageActionDto, { room, name }: IUser) => {
-    if (!room) {
+  private onWantsToSendMessage = (socket: Socket, { text }: SendMessageActionDto, user: IUser) => {
+    if (!user.room) {
       throw new PixlyError("You are not part of any room");
     }
 
     const message = deserializeMessage({
       text,
+      user,
     });
 
-    this.logger.info(`💌  ${room.name}@${name}: ${text}`);
+    this.logger.info(`💌  ${user.room.name}@${user.name}: ${text}`);
 
-    this.emitNewMessageEvent(socket, room, message);
+    this.emitNewMessageEvent(socket, user.room, user, message);
   };
 
   private onWantsToUpdateStatus = (socket: Socket, { x, y }: UpdateStatusActionDto, user: IUser) => {
@@ -258,11 +259,7 @@ export class PixlyService {
       user: serializeUser(user),
     };
 
-    // There's no way to emit to everyone in a room but the sender
-    Object.entries(room.users).forEach(([userSocketId, roomUser]) => {
-      if (user.socketId === roomUser.socketId) return;
-      socket.broadcast.to(userSocketId).emit(PixlyProtocol.events.USER_JOINED_ROOM, eventData);
-    });
+    this.emitEventToRoomExceptUser(PixlyProtocol.events.USER_JOINED_ROOM, eventData, socket, room, user);
   }
 
   private emitUserLeftRoomEvent(socket: Socket, room: IRoom, user: IUser) {
@@ -273,12 +270,12 @@ export class PixlyService {
     socket.to(room.name).emit(PixlyProtocol.events.USER_LEFT_ROOM, eventData);
   }
 
-  private emitNewMessageEvent(socket: Socket, room: IRoom, message: IMessage) {
+  private emitNewMessageEvent(socket: Socket, room: IRoom, user: IUser, message: IMessage) {
     const eventData: INewMessageEventData = {
       message: serializeMessage(message),
     };
 
-    socket.to(room.name).emit(PixlyProtocol.events.NEW_MESSAGE, eventData);
+    this.emitEventToRoomExceptUser(PixlyProtocol.events.NEW_MESSAGE, eventData, socket, room, user);
   }
 
   private emitUserStatusUpdateEvent(socket: Socket, room: IRoom, user: IUser) {
@@ -286,7 +283,15 @@ export class PixlyService {
       user: serializeUser(user),
     };
 
-    socket.to(room.name).emit(PixlyProtocol.events.USER_STATUS_UPDATE, eventData);
+    this.emitEventToRoomExceptUser(PixlyProtocol.events.USER_STATUS_UPDATE, eventData, socket, room, user);
+  }
+
+  private emitEventToRoomExceptUser(event: string, eventData: Record<string, any>, socket: Socket, room: IRoom, user: IUser) {
+    // There's no way to emit to everyone in a room but the sender
+    Object.entries(room.users).forEach(([userSocketId, roomUser]) => {
+      if (user.socketId === roomUser.socketId) return;
+      socket.broadcast.to(userSocketId).emit(event, eventData);
+    });
   }
 
   private emitErrorEvent(socket: Socket, eventData: IErrorEventData) {
