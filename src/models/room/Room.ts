@@ -11,8 +11,8 @@ export class Room implements IRoom {
     users => {
       const results: { [userSocketId: string]: IUserData } = {};
 
-      users.forEach((user: IUser) => {
-        results[users.socketId] = serializeUser(user);
+      Object.values(users).forEach((user: IUser) => {
+        results[user.socketId] = serializeUser(user);
       });
 
       return results;
@@ -38,6 +38,7 @@ export class Room implements IRoom {
   }
 
   getUserWithSocketId(socketId: string): IUser | undefined {
+    if (!this.users) return;
     return this.users[socketId];
   }
 

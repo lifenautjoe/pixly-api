@@ -31,5 +31,6 @@ export class User implements IUser {
 
     this.room.removeUserWithSocketId(this.socketId);
     this.room = null;
+    this.status = null;
   }
 }

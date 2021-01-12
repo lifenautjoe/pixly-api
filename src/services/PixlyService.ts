@@ -1,3 +1,4 @@
+import { IUserJoinedRoomEventData } from "./../../core/interfaces/event-data/IUserJoinedRoomEventData";
 import { IUserLeftRoomEventData } from "./../../core/interfaces/event-data/IUserLeftRoomEventData";
 import { IMessage } from "../models/message/IMessage";
 import { IUser } from "../models/user/IUser";
@@ -14,14 +15,14 @@ import { IErrorEventData } from "../../core/interfaces/event-data/IErrorEventDat
 import { plainToClass } from "class-transformer";
 import { Server, Socket } from "socket.io";
 import { PixlyProtocol } from "../../core/protocol";
-import { useContainer, validateSync, ValidationError } from "class-validator";
+import { validateSync, ValidationError } from "class-validator";
 import PixlyInputError from "../errors/PixlyInputError";
 import PixlyError from "../errors/PixlyError";
 import { deserializeMessage, deserializeRoom, deserializeUser } from "../utils/modelDeserializers";
 import { serializeMessage, serializeRoom, serializeUser } from "../utils/modelSerializers";
 import { Logger } from "winston";
 
-class PixlyService {
+export class PixlyService {
   private rooms: { [roomName: string]: IRoom } = {};
   private users: { [userSocketId: string]: IUser } = {};
 
@@ -29,11 +30,11 @@ class PixlyService {
     io.on("connection", this.onConnection);
   }
 
-  private onConnection(socket: Socket) {
+  private onConnection = (socket: Socket) => {
     this.installActions(socket);
 
-    socket.on("disconnecting", this.onDisconnecting);
-  }
+    socket.on("disconnecting", event => this.onDisconnecting(socket));
+  };
 
   private installActions(socket: Socket) {
     socket.on(PixlyProtocol.actions.AUTHENTICATE, rawData =>
@@ -123,19 +124,24 @@ class PixlyService {
     onAuthenticated(user);
   }
 
-  private onDisconnecting(socket: Socket) {
+  private onDisconnecting = (socket: Socket) => {
+    const user = this.getUserWithSocketId(socket.id);
+    if (user && user.room) {
+      this.emitUserLeftRoomEvent(socket, user.room, user);
+    }
     this.removeUserWithSocketId(socket.id);
-  }
+  };
 
-  private onWantsToAuthenticate(socket: Socket, { userName, userAvatar }: AuthenticateActionDto) {
+  private onWantsToAuthenticate = (socket: Socket, { name, avatar }: AuthenticateActionDto) => {
     const socketId = socket.id;
 
     let user = this.getUserWithSocketId(socketId);
 
     if (!user) {
       user = deserializeUser({
-        name: userName,
-        avatar: userAvatar,
+        socketId: socket.id,
+        name,
+        avatar,
       });
 
       this.storeUserWithSocketId(user, socketId);
@@ -143,9 +149,9 @@ class PixlyService {
     }
 
     this.logger.info(`🐵 User with socketId ${socketId} authenticated with name ${user.name}`);
-  }
+  };
 
-  private onWantsToJoinRoom(socket: Socket, { roomName }: JoinRoomActionDto, user: IUser) {
+  private onWantsToJoinRoom = (socket: Socket, { name }: JoinRoomActionDto, user: IUser) => {
     if (user.room) {
       const room = user.room;
       user.leaveRoom();
@@ -159,7 +165,7 @@ class PixlyService {
       }
     }
 
-    const room = this.getRoomWithName(roomName);
+    const room = this.getRoomWithName(name);
 
     if (room.userWithSocketIdIsInRoom(user.socketId)) {
       throw new PixlyError("You are already in the room");
@@ -167,29 +173,34 @@ class PixlyService {
 
     room.addUser(user);
     user.room = room;
+    user.updateStatus(0, 0);
 
-    socket.join(roomName);
+    socket.join(name);
 
-    this.logger.info(`🏡 User with name ${user.name} joined room with name ${roomName}`);
+    this.logger.info(`🏡 User with name ${user.name} joined room with name ${name}`);
 
+    // This events is received by the user who wanted to join the room
     this.emitJoinedRoomEvent(socket, room);
-  }
 
-  private onWantsToSendMessage(socket: Socket, { messageText }: SendMessageActionDto, { room, name }: IUser) {
+    // This event is received by everyone else on the room
+    this.emitUserJoinedRoomEvent(socket, room, user);
+  };
+
+  private onWantsToSendMessage = (socket: Socket, { text }: SendMessageActionDto, { room, name }: IUser) => {
     if (!room) {
       throw new PixlyError("You are not part of any room");
     }
 
     const message = deserializeMessage({
-      text: messageText,
+      text,
     });
 
-    this.logger.info(`💌  ${room.name}@${name}: ${messageText}`);
+    this.logger.info(`💌  ${room.name}@${name}: ${text}`);
 
     this.emitNewMessageEvent(socket, room, message);
-  }
+  };
 
-  private onWantsToUpdateStatus(socket: Socket, { x, y }: UpdateStatusActionDto, user: IUser) {
+  private onWantsToUpdateStatus = (socket: Socket, { x, y }: UpdateStatusActionDto, user: IUser) => {
     if (!user.room) {
       throw new PixlyError("You are not part of any room");
     }
@@ -199,7 +210,7 @@ class PixlyService {
     this.logger.info(`📍  ${user.room.name}@${user.name}: X=${x}, Y=${y}`);
 
     this.emitUserStatusUpdateEvent(socket, user.room, user);
-  }
+  };
 
   private onValidationErrors(socket: Socket, [firstValidationError]: ValidationError[]) {
     const pixlyException = new PixlyInputError(firstValidationError.toString());
@@ -240,6 +251,18 @@ class PixlyService {
     };
 
     socket.emit(PixlyProtocol.events.JOINED_ROOM, eventData);
+  }
+
+  private emitUserJoinedRoomEvent(socket: Socket, room: IRoom, user: IUser) {
+    const eventData: IUserJoinedRoomEventData = {
+      user: serializeUser(user),
+    };
+
+    // There's no way to emit to everyone in a room but the sender
+    Object.entries(room.users).forEach(([userSocketId, roomUser]) => {
+      if (user.socketId === roomUser.socketId) return;
+      socket.broadcast.to(userSocketId).emit(PixlyProtocol.events.USER_JOINED_ROOM, eventData);
+    });
   }
 
   private emitUserLeftRoomEvent(socket: Socket, room: IRoom, user: IUser) {
@@ -322,5 +345,3 @@ interface ResolveUserData {
   socket: Socket;
   onUser: (user: IUser) => void;
 }
-
-export default PixlyService;

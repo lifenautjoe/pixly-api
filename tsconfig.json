@@ -14,8 +14,9 @@
     "outDir": "./build",
     "allowJs": true,
     "noEmit": false,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "strictPropertyInitialization": false
   },
-  "include": ["./src/**/*", ".env", "../core/**/*"],
+  "include": ["./src/**/*", ".env", "./core/**/*"],
   "exclude": ["node_modules"]
 }
