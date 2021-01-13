@@ -77,7 +77,7 @@ By design the protocol doesn't rely on the server broadcasting the entire state 
 
 Instead, it relies on a first state retrieval and consequent partial updates applied by the clients. While this may allow for some disparity between the client and server if some packets are lost, being a minority scenario, the computing and bandwidth benefits of not sending the entire state, outweigh the risk.
 
-## Core package
+### Core package
 
 The same protocol is utilised in both the front-end and back-end, resulting in shared types and validations.
 
