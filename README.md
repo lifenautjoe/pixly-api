@@ -34,6 +34,8 @@ Personal case study that could serve as a demo application for the following cor
 
 ## Architecture
 
+![Architecture](architecture.png?raw=true "Architecture")
+
 ### Protocol
 
 The application is real-time and thus all communication is done through web-sockets.
