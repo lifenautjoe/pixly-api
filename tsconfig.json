@@ -17,6 +17,6 @@
     "esModuleInterop": true,
     "strictPropertyInitialization": false
   },
-  "include": ["./src/**/*", ".env"],
+  "include": ["./src/**/*"],
   "exclude": ["node_modules"]
 }

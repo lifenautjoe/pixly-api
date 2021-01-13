@@ -1,4 +1,4 @@
-import { IUserData } from "./../../../core/interfaces/model-data/IUserData";
+import { IUserData } from "./../../core/interfaces/model-data/IUserData";
 import { IRoom } from "./IRoom";
 import { IUser } from "../user/IUser";
 import { Transform } from "class-transformer";
