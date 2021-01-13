@@ -1,3 +1,4 @@
+import { IUserData } from "./../../core/interfaces/model-data/IUserData";
 import { IUserJoinedRoomEventData } from "./../../core/interfaces/event-data/IUserJoinedRoomEventData";
 import { IUserLeftRoomEventData } from "./../../core/interfaces/event-data/IUserLeftRoomEventData";
 import { IMessage } from "../models/message/IMessage";
@@ -304,6 +305,7 @@ export class PixlyService {
 
     room = deserializeRoom({
       name: roomName,
+      users: {},
     });
 
     this.storeRoomWithName(room, roomName);

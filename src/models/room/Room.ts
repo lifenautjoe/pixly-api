@@ -19,17 +19,13 @@ export class Room implements IRoom {
     },
     { toPlainOnly: true },
   )
-  public users?: { [userSocketId: string]: IUser };
+  public users: { [userSocketId: string]: IUser } = {};
 
   constructor(name: string) {
     this.name = name;
   }
 
   addUser(user: IUser) {
-    if (!this.users) {
-      this.users = {};
-    }
-
     this.users[user.socketId] = user;
   }
 

@@ -3,7 +3,7 @@ import { IUser } from "./../user/IUser";
 export interface IRoom {
   name: string;
 
-  users?: { [userSocketId: string]: IUser };
+  users: { [userSocketId: string]: IUser };
 
   countUsers(): number;
 
