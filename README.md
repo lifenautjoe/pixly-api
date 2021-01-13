@@ -30,7 +30,7 @@ Personal case study that could serve as a demo application for the following cor
 
 ## Demo
 
-[You can see the live demo here.](https://pixly.ws)
+[You can see the live demo here.](https://pixly-app.netlify.app/)
 
 ## Architecture
 
