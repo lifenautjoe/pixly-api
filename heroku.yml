@@ -1,5 +1,0 @@
-build:
-  docker:
-    api: Dockerfile
-  config:
-    PORT: 80
