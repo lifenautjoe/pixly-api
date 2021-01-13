@@ -17,6 +17,7 @@ validateEnv();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const corsOrigin = process.env.CORS_ORIGIN || "*";
 const env = process.env.NODE_ENV || "development";
 
 // Middleware
@@ -48,7 +49,7 @@ app.use(errorMiddleware);
 const server = new HttpServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3006",
+    origin: corsOrigin,
     methods: ["GET", "POST"],
   },
 });
