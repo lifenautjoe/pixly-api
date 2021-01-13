@@ -16,7 +16,7 @@ import { PixlyService } from "./services/PixlyService";
 validateEnv();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 80;
 const corsOrigin = process.env.CORS_ORIGIN || "*";
 const env = process.env.NODE_ENV || "development";
 
